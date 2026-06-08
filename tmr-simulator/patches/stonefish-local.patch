@@ -1,0 +1,36 @@
+diff --git a/.gitignore b/.gitignore
+index 1e4fb27..a48e0b6 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -2,3 +2,4 @@
+ .vscode/
+ .venv/
+ build/
++docs/
+\ No newline at end of file
+diff --git a/Library/src/core/GraphicalSimulationApp.cpp b/Library/src/core/GraphicalSimulationApp.cpp
+index fa750ec..2d420ad 100644
+--- a/Library/src/core/GraphicalSimulationApp.cpp
++++ b/Library/src/core/GraphicalSimulationApp.cpp
+@@ -235,7 +235,7 @@ void GraphicalSimulationApp::InitializeSDL()
+                               SDL_WINDOWPOS_CENTERED,
+                               windowW,
+                               windowH,
+-                              SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN// | SDL_WINDOW_ALLOW_HIGHDPI
++                              SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
+                               );
+                               
+     //Set window icon
+diff --git a/Library/src/core/ScenarioParser.cpp b/Library/src/core/ScenarioParser.cpp
+index e3ec211..a9e8b37 100644
+--- a/Library/src/core/ScenarioParser.cpp
++++ b/Library/src/core/ScenarioParser.cpp
+@@ -5128,7 +5128,7 @@ std::string ScenarioParser::GetFullPath(const std::string& path)
+     if(path.at(0) == '/' || path.at(0) == '~') //Absolute path?
+         return path;
+     else
+-        return GetDataPath() + path;
++        return GetDataPath() + "/" + path;
+ }
+ 
+ //Private

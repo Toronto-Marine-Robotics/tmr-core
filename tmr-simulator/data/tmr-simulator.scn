@@ -1,0 +1,202 @@
+<?xml version="1.0"?>
+<scenario>
+	<environment>
+		<ned latitude="0.0" longitude="0.0"/>
+		<ocean />
+		<atmosphere>
+			<sun azimuth="25.0" elevation="55.0"/>
+		</atmosphere>
+	</environment>
+
+	<materials>
+		<material name="PoolConcrete" density="2400.0" restitution="0.9"/>
+		<material name="Rubber" density="1100.0" restitution="0.8"/>
+		<material name="Aluminium" density="500.0" restitution="0.8"/>
+		<friction_table>
+			<friction material1="PoolConcrete" material2="PoolConcrete" static="0.6" dynamic="0.1"/>
+			<friction material1="PoolConcrete" material2="Rubber" static="0.7" dynamic="0.2"/>
+			<friction material1="Rubber" material2="Rubber" static="0.9" dynamic="0.4"/>
+		</friction_table>
+	</materials>
+
+	<looks>
+		<look name="PoolBlue" rgb="0.14 0.42 0.85" roughness="0.2" metalness="0.0"/>
+		<look name="PoolGray" rgb="0.65 0.65 0.65" roughness="0.5" metalness="0.0"/>
+		<look name="BallRed" rgb="0.9 0.2 0.2" roughness="0.2" metalness="0.0"/>
+		<look name="SubChassis" rgb="0.2 0.2 0.3" roughness="0.4" metalness="0.2"/>
+		<look name="ThrusterColor" rgb="0.4 0.4 0.4" roughness="0.5" metalness="0.7"/>
+		<look name="PropellerColor" gray="1.0" roughness="0.3" texture="propeller_tex.png"/>
+	</looks>
+
+	<dynamic name="Ball" type="sphere" physics="submerged" buoyant="true">
+		<dimensions radius="0.25"/>
+		<origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+		<material name="Rubber"/>
+		<look name="BallRed"/>
+		<world_transform xyz="0.0 0.0 -2.0" rpy="0.0 0.0 0.0"/>
+	</dynamic>
+
+	<robot name="VectoredAUV" algorithm="general" fixed="false" self_collisions="false">
+		<base_link name="base_link" type="box" physics="submerged" buoyant="true">
+			<dimensions xyz="0.6 0.4 0.3"/>
+			<origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+			<material name="Aluminium"/>
+			<look name="SubChassis"/>
+			<mass>
+				<value>14.8</value>
+				<inertia xyz="0.3 0 0 0 0.4 0 0 0 0.4"/>
+			</mass>
+			<hydrodynamics>
+				<center_of_buoyancy xyz="0.0 0.0 0.05"/>
+				<damping_linear xyz="10.0 12.0 15.0" rpy="4.0 4.0 5.0"/>
+				<damping_quadratic xyz="25.0 30.0 35.0" rpy="8.0 8.0 10.0"/>
+		</hydrodynamics>
+	</base_link>
+
+	<actuator name="thr_flb" type="thruster">
+		<link name="base_link"/>
+		<origin xyz="0.3 0.2 -0.15" rpy="0.0 0.7854 3.9270"/>
+		<specs max_setpoint="314.16" normalized_setpoint="true" inverted_setpoint="false"/>
+		<propeller diameter="0.1" right="true">
+			<mesh filename="propeller.obj" scale="1.0"/>
+			<material name="Aluminium"/>
+			<look name="PropellerColor"/>
+		</propeller>
+		<rotor_dynamics type="first_order">
+			<time_constant value="0.1"/>
+		</rotor_dynamics>
+		<thrust_model type="fluid_dynamics">
+			<thrust_coeff forward="0.14" reverse="0.12"/>
+			<torque_coeff value="0.015"/>
+		</thrust_model>
+	</actuator>
+
+	<actuator name="thr_frb" type="thruster">
+		<link name="base_link"/>
+		<origin xyz="0.3 -0.2 -0.15" rpy="0.0 0.7854 2.3562"/>
+		<specs max_setpoint="314.16" normalized_setpoint="true" inverted_setpoint="false"/>
+		<propeller diameter="0.1" right="true">
+			<mesh filename="propeller.obj" scale="1.0"/>
+			<material name="Aluminium"/>
+			<look name="PropellerColor"/>
+		</propeller>
+		<rotor_dynamics type="first_order">
+			<time_constant value="0.1"/>
+		</rotor_dynamics>
+		<thrust_model type="fluid_dynamics">
+			<thrust_coeff forward="0.14" reverse="0.12"/>
+			<torque_coeff value="0.015"/>
+		</thrust_model>
+	</actuator>
+
+	<actuator name="thr_blb" type="thruster">
+		<link name="base_link"/>
+		<origin xyz="-0.3 0.2 -0.15" rpy="0.0 0.7854 5.4978"/>
+		<specs max_setpoint="314.16" normalized_setpoint="true" inverted_setpoint="false"/>
+		<propeller diameter="0.1" right="true">
+			<mesh filename="propeller.obj" scale="1.0"/>
+			<material name="Aluminium"/>
+			<look name="PropellerColor"/>
+		</propeller>
+		<rotor_dynamics type="first_order">
+			<time_constant value="0.1"/>
+		</rotor_dynamics>
+		<thrust_model type="fluid_dynamics">
+			<thrust_coeff forward="0.14" reverse="0.12"/>
+			<torque_coeff value="0.015"/>
+		</thrust_model>
+	</actuator>
+
+	<actuator name="thr_brb" type="thruster">
+		<link name="base_link"/>
+		<origin xyz="-0.3 -0.2 -0.15" rpy="0.0 0.7854 0.7854"/>
+		<specs max_setpoint="314.16" normalized_setpoint="true" inverted_setpoint="false"/>
+		<propeller diameter="0.1" right="true">
+			<mesh filename="propeller.obj" scale="1.0"/>
+			<material name="Aluminium"/>
+			<look name="PropellerColor"/>
+		</propeller>
+		<rotor_dynamics type="first_order">
+			<time_constant value="0.1"/>
+		</rotor_dynamics>
+		<thrust_model type="fluid_dynamics">
+			<thrust_coeff forward="0.14" reverse="0.12"/>
+			<torque_coeff value="0.015"/>
+		</thrust_model>
+	</actuator>
+
+	<actuator name="thr_flt" type="thruster">
+		<link name="base_link"/>
+		<origin xyz="0.3 0.2 0.15" rpy="0.0 -0.7854 3.9270"/>
+		<specs max_setpoint="314.16" normalized_setpoint="true" inverted_setpoint="false"/>
+		<propeller diameter="0.1" right="false">
+			<mesh filename="propeller.obj" scale="1.0"/>
+			<material name="Aluminium"/>
+			<look name="PropellerColor"/>
+		</propeller>
+		<rotor_dynamics type="first_order">
+			<time_constant value="0.1"/>
+		</rotor_dynamics>
+		<thrust_model type="fluid_dynamics">
+			<thrust_coeff forward="0.14" reverse="0.12"/>
+			<torque_coeff value="0.015"/>
+		</thrust_model>
+	</actuator>
+
+	<actuator name="thr_frt" type="thruster">
+		<link name="base_link"/>
+		<origin xyz="0.3 -0.2 0.15" rpy="0.0 -0.7854 2.3562"/>
+		<specs max_setpoint="314.16" normalized_setpoint="true" inverted_setpoint="false"/>
+		<propeller diameter="0.1" right="false">
+			<mesh filename="propeller.obj" scale="1.0"/>
+			<material name="Aluminium"/>
+			<look name="PropellerColor"/>
+		</propeller>
+		<rotor_dynamics type="first_order">
+			<time_constant value="0.1"/>
+		</rotor_dynamics>
+		<thrust_model type="fluid_dynamics">
+			<thrust_coeff forward="0.14" reverse="0.12"/>
+			<torque_coeff value="0.015"/>
+		</thrust_model>
+	</actuator>
+
+	<actuator name="thr_blt" type="thruster">
+		<link name="base_link"/>
+		<origin xyz="-0.3 0.2 0.15" rpy="0.0 -0.7854 5.4978"/>
+		<specs max_setpoint="314.16" normalized_setpoint="true" inverted_setpoint="false"/>
+		<propeller diameter="0.1" right="false">
+			<mesh filename="propeller.obj" scale="1.0"/>
+			<material name="Aluminium"/>
+			<look name="PropellerColor"/>
+		</propeller>
+		<rotor_dynamics type="first_order">
+			<time_constant value="0.1"/>
+		</rotor_dynamics>
+		<thrust_model type="fluid_dynamics">
+			<thrust_coeff forward="0.14" reverse="0.12"/>
+			<torque_coeff value="0.015"/>
+		</thrust_model>
+	</actuator>
+
+	<actuator name="thr_brt" type="thruster">
+		<link name="base_link"/>
+		<origin xyz="-0.3 -0.2 0.15" rpy="0.0 -0.7854 0.7854"/>
+		<specs max_setpoint="314.16" normalized_setpoint="true" inverted_setpoint="false"/>
+		<propeller diameter="0.1" right="false">
+			<mesh filename="propeller.obj" scale="1.0"/>
+			<material name="Aluminium"/>
+			<look name="PropellerColor"/>
+		</propeller>
+		<rotor_dynamics type="first_order">
+			<time_constant value="0.1"/>
+		</rotor_dynamics>
+		<thrust_model type="fluid_dynamics">
+			<thrust_coeff forward="0.14" reverse="0.12"/>
+			<torque_coeff value="0.015"/>
+		</thrust_model>
+	</actuator>
+
+	<world_transform xyz="0.0 0.0 -1.0" rpy="0.0 0.0 0.0"/>
+</robot>
+</scenario>

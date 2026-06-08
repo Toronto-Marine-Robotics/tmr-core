@@ -1,0 +1,3 @@
+[submodule "tmr-simulator/stonefish"]
+	path = tmr-simulator/stonefish
+	url = https://github.com/patrykcieslak/stonefish.git
