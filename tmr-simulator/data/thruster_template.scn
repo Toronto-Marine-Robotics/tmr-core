@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<scenario>
+    <actuator name="$(arg name)" type="thruster">
+        <link name="base_link"/>
+        <origin xyz="$(arg xyz)" rpy="$(arg rpy)"/>
+        <specs max_setpoint="397.94" normalized_setpoint="true" inverted_setpoint="false"/>
+        <propeller diameter="0.076" right="$(arg right)">
+            <mesh filename="propeller.obj" scale="0.76"/>
+            <material name="Aluminium"/>
+            <look name="PropellerColor"/>
+        </propeller>
+        <rotor_dynamics type="mechanical_pi">
+            <propeller_inertia value="0.00005"/> 
+            <kp value="1.5"/>
+            <ki value="0.5"/>
+            <ilimit value="10.0"/>
+        </rotor_dynamics>
+        <thrust_model type="fluid_dynamics">
+            <thrust_coeff forward="0.041" reverse="0.032"/>
+            <torque_coeff value="0.003"/>
+        </thrust_model>
+    </actuator>
+</scenario>

@@ -32,7 +32,8 @@ void MyApp::ProcessInputs()
             for (size_t i = 0;; ++i)
             {
                 auto *a = robot->getActuator(i);
-                if (!a) break;
+                if (!a)
+                    break;
                 cInfo("  Actuator[%zu] name='%s' type=%d", i, a->getName().c_str(), (int)a->getType());
             }
         }
@@ -129,10 +130,10 @@ void MyApp::ProcessInputs()
         {-1,  1, -1,  1},  // frb
         { 1, -1, -1,  1},  // blb
         { 1,  1, -1, -1},  // brb
-        {-1, -1,  1, -1},  // flt
-        {-1,  1,  1,  1},  // frt
-        { 1, -1,  1,  1},  // blt
-        { 1,  1,  1, -1},  // brt
+        { 1,  1,  -1,  1},  // flt
+        {1,  -1,  -1,  -1},  // frt
+        { -1, 1,  -1,  -1},  // blt
+        { -1, -1, -1, 1},  // brt
     };
     // clang-format on
 
@@ -140,10 +141,9 @@ void MyApp::ProcessInputs()
     sf::Scalar sp[8];
     for (int i = 0; i < 8; ++i)
     {
-        sp[i] = s * (alloc[i].surge * cmd_surge
-                   + alloc[i].sway * cmd_sway
-                   + alloc[i].heave * cmd_heave
-                   + alloc[i].yaw * cmd_yaw);
+        sf::Scalar raw_sp = (alloc[i].surge * cmd_surge + alloc[i].sway * cmd_sway + alloc[i].heave * cmd_heave + alloc[i].yaw * cmd_yaw);
+        raw_sp = std::max(static_cast<sf::Scalar>(-1.0), std::min(static_cast<sf::Scalar>(1.0), raw_sp));
+        sp[i] = s * raw_sp;
         set(names[i], sp[i]);
     }
 }
