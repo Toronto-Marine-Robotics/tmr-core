@@ -19,6 +19,8 @@ import time
 import argparse
 import traceback
 import numpy as np
+from PIL import Image
+import io
 
 ZENOH_DVL_TOPIC = "auv/dvl"
 ZENOH_DEPTH_TOPIC = "auv/depth"
@@ -48,7 +50,7 @@ def setup_blueprint():
     blueprint = rrb.Blueprint(
         rrb.Vertical(
             rrb.Horizontal(
-                rrb.Spatial2DView(name="Color", origin="world/camera"),
+                rrb.Spatial2DView(name="Color", origin="world/camera/image"),
                 rrb.Spatial2DView(name="Depth", origin="world/camera/depth"),
                 column_shares=[1, 1],
             ),
@@ -110,12 +112,9 @@ def on_color(sample):
         if len(payload) < 16:
             return
         ts, w, h = struct.unpack("<dII", payload[:16])
-        num_pixels = w * h
-        rgba_bytes = payload[16:]
-        expected = num_pixels * 4
-        if len(rgba_bytes) < expected:
-            return
-        image = np.frombuffer(rgba_bytes[:expected], dtype=np.uint8).reshape((h, w, 4))
+        jpeg_bytes = payload[16:]
+        pil_img = Image.open(io.BytesIO(jpeg_bytes)).convert("RGBA")
+        image = np.asarray(pil_img)
         rr.set_time("sim_time", duration=ts)
         rr.log(
             "world/camera/image",

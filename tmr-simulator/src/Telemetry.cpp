@@ -16,7 +16,8 @@ static inline bool zenoh_pub_is_empty(const z_owned_publisher_t &p)
 }
 
 Telemetry::Telemetry()
-    : connected_(false), camerasRegistered_(false), sampleCounter_(0)
+    : connected_(false), camerasRegistered_(false), sampleCounter_(0),
+      publishCounter_(0), cameraPublishInterval_(8)
 {
     memset(&session_, 0, sizeof(session_));
     memset(&pubDvl_, 0, sizeof(pubDvl_));
@@ -141,8 +142,11 @@ void Telemetry::PublishStep(sf::SimulationManager *sim, double simTime)
         camerasRegistered_ = true;
     }
 
-    PublishDepthPixels(simTime);
-    PublishColorPixels(simTime);
+    if (++publishCounter_ % cameraPublishInterval_ == 0)
+    {
+        PublishDepthPixels(simTime);
+        PublishColorPixels(simTime);
+    }
 
     auto *imu = dynamic_cast<sf::IMU *>(robot->getSensor(prefix + "imu"));
     if (imu)
@@ -214,7 +218,7 @@ void Telemetry::InstallCameraHandlers(sf::DepthCamera *depthCam, sf::ColorCamera
         std::lock_guard<std::mutex> lock(camMutex_);
         colorW_ = resX;
         colorH_ = resY;
-        colorPixelBuffer_.assign(pixels, pixels + resX * resY * 4);
+        colorPixelBuffer_.assign(pixels, pixels + resX * resY * 3);
     });
 }
 
@@ -282,15 +286,42 @@ void Telemetry::PublishColorPixels(double simTime)
         pixels.swap(colorPixelBuffer_);
     }
 
-    uint32_t numPixels = w * h;
-    uint32_t headerSize = sizeof(double) + 2 * sizeof(uint32_t);
-    uint32_t dataSize = numPixels * 4;
+    unsigned long jpegSize = 0;
+    unsigned char *jpegBuf = nullptr;
 
-    auto *buffer = new std::vector<uint8_t>(headerSize + dataSize);
+    struct jpeg_compress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+    cinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_compress(&cinfo);
+    jpeg_mem_dest(&cinfo, &jpegBuf, &jpegSize);
+
+    cinfo.image_width = w;
+    cinfo.image_height = h;
+    cinfo.input_components = 3;
+    cinfo.in_color_space = JCS_RGB;
+    jpeg_set_defaults(&cinfo);
+    jpeg_set_quality(&cinfo, 85, TRUE);
+    jpeg_start_compress(&cinfo, TRUE);
+
+    JSAMPROW row_pointer[1];
+    int stride = w * 3;
+    while (cinfo.next_scanline < h)
+    {
+        row_pointer[0] = pixels.data() + cinfo.next_scanline * stride;
+        jpeg_write_scanlines(&cinfo, row_pointer, 1);
+    }
+
+    jpeg_finish_compress(&cinfo);
+    jpeg_destroy_compress(&cinfo);
+
+    uint32_t headerSize = sizeof(double) + 2 * sizeof(uint32_t);
+    auto *buffer = new std::vector<uint8_t>(headerSize + jpegSize);
     memcpy(buffer->data(), &simTime, sizeof(double));
     memcpy(buffer->data() + sizeof(double), &w, sizeof(uint32_t));
     memcpy(buffer->data() + sizeof(double) + sizeof(uint32_t), &h, sizeof(uint32_t));
-    memcpy(buffer->data() + headerSize, pixels.data(), dataSize);
+    memcpy(buffer->data() + headerSize, jpegBuf, jpegSize);
+
+    std::free(jpegBuf);
 
     z_owned_bytes_t bytes;
     z_bytes_from_buf(&bytes, buffer->data(), buffer->size(), [](void *, void *ctx)

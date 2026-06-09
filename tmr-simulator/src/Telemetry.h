@@ -16,6 +16,7 @@
 #include <cstring>
 #include <vector>
 #include <mutex>
+#include <jpeglib.h>
 
 class Telemetry {
 public:
@@ -53,6 +54,8 @@ private:
     z_owned_keyexpr_t keyColor_;
     z_owned_keyexpr_t keyImu_;
     uint64_t sampleCounter_;
+    int publishCounter_;
+    int cameraPublishInterval_;
     std::mutex camMutex_;
     std::vector<float> depthPixelBuffer_;
     unsigned int depthW_, depthH_;

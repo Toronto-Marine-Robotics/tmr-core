@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory(stonefish)
 
+find_package(JPEG REQUIRED)
+
 # --- Zenoh C ---
 set(ZENOH_C_DIR "$ENV{HOME}/zenoh-c"
     CACHE PATH "Path to zenoh-c SDK")
@@ -44,4 +46,5 @@ target_compile_definitions(tmr-simulator PRIVATE DATA_DIR="${CMAKE_SOURCE_DIR}/d
 target_link_libraries(tmr-simulator PRIVATE
     Stonefish
     zenohc
+    JPEG::JPEG
 )
