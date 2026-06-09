@@ -1,0 +1,120 @@
+<?xml version="1.0"?>
+<scenario>
+  <robot
+    name="VectoredAUV"
+    algorithm="general"
+    fixed="false"
+    self_collisions="false"
+  >
+    <base_link name="base_link" type="box" physics="submerged" buoyant="true">
+      <dimensions xyz="0.6 0.4 0.3" />
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+      <material name="Aluminium" />
+      <look name="SubChassis" />
+      <mass value="70.0" />
+      <inertia xyz="0.3 0.4 0.4" />
+      <cg xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+      <hydrodynamics>
+        <center_of_buoyancy xyz="0.0 0.0 0.05" />
+        <damping_linear xyz="10.0 12.0 15.0" rpy="4.0 4.0 5.0" />
+        <damping_quadratic xyz="25.0 30.0 35.0" rpy="8.0 8.0 10.0" />
+      </hydrodynamics>
+    </base_link>
+
+    <include file="thruster_template.scn">
+      <arg name="name" value="thr_flb" />
+      <arg name="xyz" value="0.3 0.2 -0.15" />
+      <arg name="rpy" value="0.0 0.7854 3.9270" />
+      <arg name="right" value="true" />
+    </include>
+    <include file="thruster_template.scn">
+      <arg name="name" value="thr_frb" />
+      <arg name="xyz" value="0.3 -0.2 -0.15" />
+      <arg name="rpy" value="0.0 0.7854 2.3562" />
+      <arg name="right" value="true" />
+    </include>
+    <include file="thruster_template.scn">
+      <arg name="name" value="thr_blb" />
+      <arg name="xyz" value="-0.3 0.2 -0.15" />
+      <arg name="rpy" value="0.0 0.7854 5.4978" />
+      <arg name="right" value="true" />
+    </include>
+    <include file="thruster_template.scn">
+      <arg name="name" value="thr_brb" />
+      <arg name="xyz" value="-0.3 -0.2 -0.15" />
+      <arg name="rpy" value="0.0 0.7854 0.7854" />
+      <arg name="right" value="true" />
+    </include>
+    <include file="thruster_template.scn">
+      <arg name="name" value="thr_flt" />
+      <arg name="xyz" value="0.3 0.2 0.15" />
+      <arg name="rpy" value="0.0 -0.7854 3.9270" />
+      <arg name="right" value="false" />
+    </include>
+    <include file="thruster_template.scn">
+      <arg name="name" value="thr_frt" />
+      <arg name="xyz" value="0.3 -0.2 0.15" />
+      <arg name="rpy" value="0.0 -0.7854 2.3562" />
+      <arg name="right" value="false" />
+    </include>
+    <include file="thruster_template.scn">
+      <arg name="name" value="thr_blt" />
+      <arg name="xyz" value="-0.3 0.2 0.15" />
+      <arg name="rpy" value="0.0 -0.7854 5.4978" />
+      <arg name="right" value="false" />
+    </include>
+    <include file="thruster_template.scn">
+      <arg name="name" value="thr_brt" />
+      <arg name="xyz" value="-0.3 -0.2 0.15" />
+      <arg name="rpy" value="0.0 -0.7854 0.7854" />
+      <arg name="right" value="false" />
+    </include>
+
+    <sensor name="dvl" type="dvl" rate="10.0">
+      <history samples="1000" />
+      <link name="base_link" />
+      <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.15" />
+      <specs beam_angle="30.0" beam_positive_z="true" />
+      <range velocity="9.0 9.0 9.0" altitude_min="0.5" altitude_max="81.0" />
+      <water_layer
+        minimum_layer_size="5.0"
+        boundary_near="10.0"
+        boundary_far="30.0"
+      />
+      <noise velocity="0.0015" altitude="0.001" />
+    </sensor>
+
+    <sensor name="imu" rate="10.0" type="imu">
+      <range angular_velocity="10.0 10.0 5.0" linear_acceleration="10.0" />
+      <noise
+        angle="0.1 0.1 0.5"
+        angular_velocity="0.05"
+        yaw_drift="0.001"
+        linear_acceleration="0.1"
+      />
+      <history samples="1" />
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+      <link name="base_link" />
+    </sensor>
+
+    <sensor name="oak_d_pro_w_depth" type="depthcamera" rate="15.0">
+      <link name="base_link" />
+      <origin rpy="1.5708 0.0 1.5708" xyz="0.31 0.0 0.0" />
+      <specs
+        resolution_x="640"
+        resolution_y="400"
+        horizontal_fov="80.0"
+        depth_min="0.2"
+        depth_max="20.0"
+      />
+      <noise depth="0.01" />
+    </sensor>
+
+    <sensor name="oak_d_pro_w_color" type="camera" rate="15.0">
+      <link name="base_link" />
+      <origin rpy="1.5708 0.0 1.5708" xyz="0.31 0.0 0.0" />
+      <specs resolution_x="1280" resolution_y="800" horizontal_fov="80.0" />
+    </sensor>
+
+    <world_transform xyz="0.0 0.0 -1.0" rpy="0.0 0.0 0.0" /> </robot
+></scenario>

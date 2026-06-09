@@ -1,3 +1,7 @@
 [submodule "tmr-simulator/stonefish"]
 	path = tmr-simulator/stonefish
 	url = https://github.com/patrykcieslak/stonefish.git
+[submodule "tmr-localization/gtsam"]
+	path = tmr-localization/gtsam
+	url = https://github.com/borglab/gtsam.git
+
