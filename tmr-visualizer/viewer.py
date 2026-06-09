@@ -17,6 +17,7 @@ import zenoh
 import struct
 import time
 import argparse
+import traceback
 import numpy as np
 
 ZENOH_DVL_TOPIC = "auv/dvl"
@@ -63,75 +64,87 @@ def setup_blueprint():
 
 
 def on_dvl(sample):
-    print(f"[tmr-visualizer] Received DVL sample {len(sample.payload)} bytes")
-    payload = bytes(sample.payload)
-    if len(payload) < DVL_SIZE:
-        return
-    unpacked = struct.unpack(DVL_FORMAT, payload[:DVL_SIZE])
-    ts, vx, vy, vz, alt, status = unpacked
-    rr.set_time("sim_time", duration=ts)
-    rr.log("auv/dvl/velocity_x", rr.Scalars(vx))
-    rr.log("auv/dvl/velocity_y", rr.Scalars(vy))
-    rr.log("auv/dvl/velocity_z", rr.Scalars(vz))
-    rr.log("auv/dvl/altitude", rr.Scalars(alt))
-    rr.log("auv/dvl/status", rr.Scalars(float(status)))
+    try:
+        print(f"[tmr-visualizer] Received DVL sample {len(sample.payload)} bytes")
+        payload = bytes(sample.payload)
+        if len(payload) < DVL_SIZE:
+            return
+        unpacked = struct.unpack(DVL_FORMAT, payload[:DVL_SIZE])
+        ts, vx, vy, vz, alt, status = unpacked
+        rr.set_time("sim_time", duration=ts)
+        rr.log("auv/dvl/velocity_x", rr.Scalars(vx))
+        rr.log("auv/dvl/velocity_y", rr.Scalars(vy))
+        rr.log("auv/dvl/velocity_z", rr.Scalars(vz))
+        rr.log("auv/dvl/altitude", rr.Scalars(alt))
+        rr.log("auv/dvl/status", rr.Scalars(float(status)))
+    except Exception:
+        traceback.print_exc()
 
 
 def on_depth(sample):
-    payload = bytes(sample.payload)
-    if len(payload) < 16:
-        return
-    ts, w, h = struct.unpack("<dII", payload[:16])
-    num_pixels = w * h
-    depth_bytes = payload[16:]
-    expected = num_pixels * 2
-    if len(depth_bytes) < expected:
-        return
-    depth = np.frombuffer(depth_bytes[:expected], dtype=np.int16).reshape((h, w))
-    depth_meters = depth.astype(np.float32) / DEPTH_SCALE
-    depth_meters[depth == 0] = 0.0
-    rr.set_time("sim_time", duration=ts)
-    rr.log(
-        "world/camera/depth",
-        rr.DepthImage(depth_meters, meter=1.0),
-    )
+    try:
+        payload = bytes(sample.payload)
+        if len(payload) < 16:
+            return
+        ts, w, h = struct.unpack("<dII", payload[:16])
+        num_pixels = w * h
+        depth_bytes = payload[16:]
+        expected = num_pixels * 2
+        if len(depth_bytes) < expected:
+            return
+        depth = np.frombuffer(depth_bytes[:expected], dtype=np.int16).reshape((h, w))
+        depth_meters = depth.astype(np.float32) / DEPTH_SCALE
+        depth_meters[depth == 0] = 0.0
+        rr.set_time("sim_time", duration=ts)
+        rr.log(
+            "world/camera/depth",
+            rr.DepthImage(depth_meters, meter=1.0),
+        )
+    except Exception:
+        traceback.print_exc()
 
 
 def on_color(sample):
-    payload = bytes(sample.payload)
-    if len(payload) < 16:
-        return
-    ts, w, h = struct.unpack("<dII", payload[:16])
-    num_pixels = w * h
-    rgba_bytes = payload[16:]
-    expected = num_pixels * 4
-    if len(rgba_bytes) < expected:
-        return
-    image = np.frombuffer(rgba_bytes[:expected], dtype=np.uint8).reshape((h, w, 4))
-    rr.set_time("sim_time", duration=ts)
-    rr.log(
-        "world/camera/image",
-        rr.Image(image),
-    )
+    try:
+        payload = bytes(sample.payload)
+        if len(payload) < 16:
+            return
+        ts, w, h = struct.unpack("<dII", payload[:16])
+        num_pixels = w * h
+        rgba_bytes = payload[16:]
+        expected = num_pixels * 4
+        if len(rgba_bytes) < expected:
+            return
+        image = np.frombuffer(rgba_bytes[:expected], dtype=np.uint8).reshape((h, w, 4))
+        rr.set_time("sim_time", duration=ts)
+        rr.log(
+            "world/camera/image",
+            rr.Image(image),
+        )
+    except Exception:
+        traceback.print_exc()
 
 
 def on_imu(sample):
-    print(f"[tmr-visualizer] Received IMU sample {len(sample.payload)} bytes")
-    payload = bytes(sample.payload)
-    if len(payload) < IMU_SIZE:
-        return
-    unpacked = struct.unpack(IMU_FORMAT, payload[:IMU_SIZE])
-    ts, roll, pitch, yaw, ang_vel_x, ang_vel_y, ang_vel_z, lin_acc_x, lin_acc_y, lin_acc_z = unpacked
-    rr.set_time("sim_time", duration=ts)
-    rr.log("auv/imu/roll", rr.Scalars(roll))
-    rr.log("auv/imu/pitch", rr.Scalars(pitch))
-    rr.log("auv/imu/yaw", rr.Scalars(yaw))
-    rr.log("auv/imu/angular_velocity_x", rr.Scalars(ang_vel_x))
-    rr.log("auv/imu/angular_velocity_y", rr.Scalars(ang_vel_y))
-    rr.log("auv/imu/angular_velocity_z", rr.Scalars(ang_vel_z))
-    rr.log("auv/imu/linear_acceleration_x", rr.Scalars(lin_acc_x))
-    rr.log("auv/imu/linear_acceleration_y", rr.Scalars(lin_acc_y))
-    rr.log("auv/imu/linear_acceleration_z", rr.Scalars(lin_acc_z))
+    try:
+        print(f"[tmr-visualizer] Received IMU sample {len(sample.payload)} bytes")
+        payload = bytes(sample.payload)
+        if len(payload) < IMU_SIZE:
+            return
+        unpacked = struct.unpack(IMU_FORMAT, payload[:IMU_SIZE])
+        ts, roll, pitch, yaw, ang_vel_x, ang_vel_y, ang_vel_z, lin_acc_x, lin_acc_y, lin_acc_z = unpacked
+        rr.set_time("sim_time", duration=ts)
+        rr.log("auv/imu/roll", rr.Scalars(roll))
+        rr.log("auv/imu/pitch", rr.Scalars(pitch))
+        rr.log("auv/imu/yaw", rr.Scalars(yaw))
+        rr.log("auv/imu/angular_velocity_x", rr.Scalars(ang_vel_x))
+        rr.log("auv/imu/angular_velocity_y", rr.Scalars(ang_vel_y))
+        rr.log("auv/imu/angular_velocity_z", rr.Scalars(ang_vel_z))
+        rr.log("auv/imu/linear_acceleration_x", rr.Scalars(lin_acc_x))
+        rr.log("auv/imu/linear_acceleration_y", rr.Scalars(lin_acc_y))
+        rr.log("auv/imu/linear_acceleration_z", rr.Scalars(lin_acc_z))
+    except Exception:
+        traceback.print_exc()
 
 
 def main():

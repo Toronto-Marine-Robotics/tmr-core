@@ -15,6 +15,7 @@
 
 #include <cstring>
 #include <vector>
+#include <mutex>
 
 class Telemetry {
 public:
@@ -32,8 +33,6 @@ private:
     bool InitZenoh();
     void ShutdownZenoh();
     void PublishDVL(const sf::DVL* dvl, double simTime);
-    void PublishDepth(sf::DepthCamera* cam, double simTime);
-    void PublishColor(sf::ColorCamera* cam, double simTime);
     void PublishIMU(const sf::IMU* imu, double simTime);
 
     static constexpr const char* ZENOH_DVL_TOPIC = "auv/dvl";
@@ -43,6 +42,7 @@ private:
     static constexpr float FP_SCALE = 1000.0f;
 
     bool connected_;
+    bool camerasRegistered_;
     z_owned_session_t session_;
     z_owned_publisher_t pubDvl_;
     z_owned_publisher_t pubDepth_;
@@ -53,6 +53,15 @@ private:
     z_owned_keyexpr_t keyColor_;
     z_owned_keyexpr_t keyImu_;
     uint64_t sampleCounter_;
+    std::mutex camMutex_;
+    std::vector<float> depthPixelBuffer_;
+    unsigned int depthW_, depthH_;
+    std::vector<uint8_t> colorPixelBuffer_;
+    unsigned int colorW_, colorH_;
+
+    void InstallCameraHandlers(sf::DepthCamera* depthCam, sf::ColorCamera* colorCam);
+    void PublishDepthPixels(double simTime);
+    void PublishColorPixels(double simTime);
 };
 
 #endif

@@ -8,14 +8,15 @@
 
 static inline bool zenoh_pub_is_empty(const z_owned_publisher_t &p)
 {
-    for (int i = 0; i < 120; ++i)
-        if (p._0[i] != 0)
+    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&p);
+    for (size_t i = 0; i < sizeof(z_owned_publisher_t); ++i)
+        if (bytes[i] != 0)
             return false;
     return true;
 }
 
 Telemetry::Telemetry()
-    : connected_(false), sampleCounter_(0)
+    : connected_(false), camerasRegistered_(false), sampleCounter_(0)
 {
     memset(&session_, 0, sizeof(session_));
     memset(&pubDvl_, 0, sizeof(pubDvl_));
@@ -125,19 +126,25 @@ void Telemetry::PublishStep(sf::SimulationManager *sim, double simTime)
     if (!robot)
         return;
 
-    auto *dvl = dynamic_cast<sf::DVL *>(robot->getSensor("dvl"));
+    std::string prefix = robot->getName() + "/";
+
+    auto *dvl = dynamic_cast<sf::DVL *>(robot->getSensor(prefix + "dvl"));
     if (dvl)
         PublishDVL(dvl, simTime);
 
-    auto *depthCam = dynamic_cast<sf::DepthCamera *>(robot->getSensor("oak_d_pro_w_depth"));
-    if (depthCam)
-        PublishDepth(depthCam, simTime);
+    auto *depthCam = dynamic_cast<sf::DepthCamera *>(robot->getSensor(prefix + "oak_d_pro_w_depth"));
+    auto *colorCam = dynamic_cast<sf::ColorCamera *>(robot->getSensor(prefix + "oak_d_pro_w_color"));
 
-    auto *colorCam = dynamic_cast<sf::ColorCamera *>(robot->getSensor("oak_d_pro_w_color"));
-    if (colorCam)
-        PublishColor(colorCam, simTime);
+    if (!camerasRegistered_ && depthCam && colorCam)
+    {
+        InstallCameraHandlers(depthCam, colorCam);
+        camerasRegistered_ = true;
+    }
 
-    auto *imu = dynamic_cast<sf::IMU *>(robot->getSensor("imu"));
+    PublishDepthPixels(simTime);
+    PublishColorPixels(simTime);
+
+    auto *imu = dynamic_cast<sf::IMU *>(robot->getSensor(prefix + "imu"));
     if (imu)
         PublishIMU(imu, simTime);
 
@@ -182,21 +189,51 @@ void Telemetry::PublishDVL(const sf::DVL *dvl, double simTime)
           z_bytes_move(&bytes), &opts);
 }
 
-void Telemetry::PublishDepth(sf::DepthCamera *cam, double simTime)
+void Telemetry::InstallCameraHandlers(sf::DepthCamera *depthCam, sf::ColorCamera *colorCam)
+{
+    depthCam->InstallNewDataHandler([this](sf::DepthCamera *cam)
+    {
+        unsigned int resX, resY;
+        cam->getResolution(resX, resY);
+        void *data = cam->getImageDataPointer(0);
+        if (!data) return;
+        float *pixels = static_cast<float *>(data);
+        std::lock_guard<std::mutex> lock(camMutex_);
+        depthW_ = resX;
+        depthH_ = resY;
+        depthPixelBuffer_.assign(pixels, pixels + resX * resY);
+    });
+
+    colorCam->InstallNewDataHandler([this](sf::ColorCamera *cam)
+    {
+        unsigned int resX, resY;
+        cam->getResolution(resX, resY);
+        void *data = cam->getImageDataPointer(0);
+        if (!data) return;
+        uint8_t *pixels = static_cast<uint8_t *>(data);
+        std::lock_guard<std::mutex> lock(camMutex_);
+        colorW_ = resX;
+        colorH_ = resY;
+        colorPixelBuffer_.assign(pixels, pixels + resX * resY * 4);
+    });
+}
+
+void Telemetry::PublishDepthPixels(double simTime)
 {
     if (zenoh_pub_is_empty(pubDepth_))
         return;
 
-    unsigned int resX, resY;
-    cam->getResolution(resX, resY);
+    std::vector<float> pixels;
+    unsigned int w, h;
+    {
+        std::lock_guard<std::mutex> lock(camMutex_);
+        if (depthPixelBuffer_.empty())
+            return;
+        w = depthW_;
+        h = depthH_;
+        pixels.swap(depthPixelBuffer_);
+    }
 
-    void *imgPtr = cam->getImageDataPointer(0);
-    if (!imgPtr)
-        return;
-    GLfloat *depthData = static_cast<GLfloat *>(imgPtr);
-
-    uint32_t w = static_cast<uint32_t>(resX);
-    uint32_t h = static_cast<uint32_t>(resY);
     uint32_t numPixels = w * h;
     uint32_t headerSize = sizeof(double) + 2 * sizeof(uint32_t);
     uint32_t dataSize = numPixels * sizeof(int16_t);
@@ -209,7 +246,7 @@ void Telemetry::PublishDepth(sf::DepthCamera *cam, double simTime)
     int16_t *dst = reinterpret_cast<int16_t *>(buffer->data() + headerSize);
     for (uint32_t i = 0; i < numPixels; ++i)
     {
-        float d = depthData[i];
+        float d = pixels[i];
         if (d <= 0.0f || d > 20.0f || std::isnan(d) || std::isinf(d))
             dst[i] = 0;
         else
@@ -220,8 +257,8 @@ void Telemetry::PublishDepth(sf::DepthCamera *cam, double simTime)
     }
 
     z_owned_bytes_t bytes;
-    z_bytes_from_buf(&bytes, buffer->data(), buffer->size(), [](void *data, void *)
-                     { delete static_cast<std::vector<uint8_t> *>(data); }, buffer);
+    z_bytes_from_buf(&bytes, buffer->data(), buffer->size(), [](void *, void *ctx)
+                     { delete static_cast<std::vector<uint8_t> *>(ctx); }, buffer);
 
     z_put_options_t opts;
     z_put_options_default(&opts);
@@ -229,21 +266,22 @@ void Telemetry::PublishDepth(sf::DepthCamera *cam, double simTime)
           z_bytes_move(&bytes), &opts);
 }
 
-void Telemetry::PublishColor(sf::ColorCamera *cam, double simTime)
+void Telemetry::PublishColorPixels(double simTime)
 {
     if (zenoh_pub_is_empty(pubColor_))
         return;
 
-    unsigned int resX, resY;
-    cam->getResolution(resX, resY);
+    std::vector<uint8_t> pixels;
+    unsigned int w, h;
+    {
+        std::lock_guard<std::mutex> lock(camMutex_);
+        if (colorPixelBuffer_.empty())
+            return;
+        w = colorW_;
+        h = colorH_;
+        pixels.swap(colorPixelBuffer_);
+    }
 
-    void *imgPtr = cam->getImageDataPointer(0);
-    if (!imgPtr)
-        return;
-    GLubyte *rgbaData = static_cast<GLubyte *>(imgPtr);
-
-    uint32_t w = static_cast<uint32_t>(resX);
-    uint32_t h = static_cast<uint32_t>(resY);
     uint32_t numPixels = w * h;
     uint32_t headerSize = sizeof(double) + 2 * sizeof(uint32_t);
     uint32_t dataSize = numPixels * 4;
@@ -252,11 +290,11 @@ void Telemetry::PublishColor(sf::ColorCamera *cam, double simTime)
     memcpy(buffer->data(), &simTime, sizeof(double));
     memcpy(buffer->data() + sizeof(double), &w, sizeof(uint32_t));
     memcpy(buffer->data() + sizeof(double) + sizeof(uint32_t), &h, sizeof(uint32_t));
-    memcpy(buffer->data() + headerSize, rgbaData, dataSize);
+    memcpy(buffer->data() + headerSize, pixels.data(), dataSize);
 
     z_owned_bytes_t bytes;
-    z_bytes_from_buf(&bytes, buffer->data(), buffer->size(), [](void *data, void *)
-                     { delete static_cast<std::vector<uint8_t> *>(data); }, buffer);
+    z_bytes_from_buf(&bytes, buffer->data(), buffer->size(), [](void *, void *ctx)
+                     { delete static_cast<std::vector<uint8_t> *>(ctx); }, buffer);
 
     z_put_options_t opts;
     z_put_options_default(&opts);
